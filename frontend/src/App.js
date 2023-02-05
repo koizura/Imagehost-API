@@ -1,23 +1,30 @@
-import logo from './logo.svg';
-import './App.css';
+import axios from "axios";
+import { useEffect, useState } from "react";
+import "./App.css";
+import ButtonAppBar from "./components/ButtonAppBar";
+import ImageList from "./components/ImageList";
+import UploadForm from "./components/UploadForm";
 
 function App() {
+  const [images, setImages] = useState([]);
+
+  function refresh() {
+    axios.get(`http://localhost:3005/photos/all`).then((res) => {
+      console.log(res.data);
+      setImages(res.data);
+    });
+  }
+
+  useEffect(() => {
+    refresh();
+    document.title = "ImageHost API 2";
+  }, []);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <ButtonAppBar></ButtonAppBar>
+      <UploadForm refresh={refresh}></UploadForm>
+      <ImageList images={images} refresh={refresh}></ImageList>
     </div>
   );
 }
