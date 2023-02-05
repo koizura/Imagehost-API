@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const fs = require("fs");
 const DatabaseHandler = require("../DatabaseHandler");
+const sharp = require("sharp");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -40,6 +41,13 @@ router.post("/upload", upload.single("image"), (req, res, next) => {
         req.body.description || "",
         new Date().toISOString()
       );
+      sharp(req.file.path)
+        .resize(300, 200, {
+          kernel: sharp.kernel.nearest,
+          fit: "cover",
+        })
+        .toFile("./uploads/min." + req.file.originalname);
+      return;
     } else {
       console.log("file already exists");
     }
@@ -53,15 +61,27 @@ router.get("/all", (req, res, next) => {
   });
 });
 
-router.put("/", upload.none(), (req, res, next) => {
-  DatabaseHandler.getFile(req.body.filename).then((file) => {
-    console.log(req.body);
+router.get("/:filename", (req, res, next) => {
+  DatabaseHandler.getFile(req.params.filename).then((file) => {
+    if (file == undefined) {
+      console.log("couldn't find file to return");
+      res.send();
+      return;
+    }
+    res.json(file);
+  });
+});
+
+router.put("/:filename", upload.none(), (req, res, next) => {
+  DatabaseHandler.getFile(req.params.filename).then((file) => {
+    console.log(req.params.filename, req.body);
     if (file == undefined) {
       console.log("File to modify not found");
       res.send();
+      return;
     }
     DatabaseHandler.updateFile(
-      req.body.filename,
+      req.params.filename,
       req.body.title,
       req.body.description
     );
@@ -70,15 +90,19 @@ router.put("/", upload.none(), (req, res, next) => {
   });
 });
 
-router.delete("/", upload.none(), (req, res, next) => {
-  DatabaseHandler.getFile(req.body.filename).then((file) => {
-    console.log(req.body);
+router.delete("/:filename", upload.none(), (req, res, next) => {
+  DatabaseHandler.getFile(req.params.filename).then((file) => {
+    console.log(req.params);
     if (file == undefined) {
       console.log("File to delete not found");
       res.send();
+      return;
     }
-    DatabaseHandler.removeFile(req.body.filename);
-    fs.unlink("./uploads/" + req.body.filename, (err) => {
+    DatabaseHandler.removeFile(req.params.filename);
+    fs.unlink("./uploads/" + req.params.filename, (err) => {
+      if (err) console.log(err);
+    });
+    fs.unlink("./uploads/min." + req.params.filename, (err) => {
       if (err) console.log(err);
     });
     res.send();
